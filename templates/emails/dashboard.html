@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — AI Email Classification and Routing System{% endblock %}
+{% block breadcrumb %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Page Heading -->
+<div class="page-heading-row">
+  <div class="page-heading mb-0">
+    <h1>Operations Dashboard</h1>
+    <p>Live overview of email classifications, routing, and analysis trends.</p>
+  </div>
+  <a href="{% url 'emails:analyze' %}" class="btn btn-primary" id="dashAnalyzeBtn">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Analyze New Email
+  </a>
+</div>
+
+<!-- ── Summary Cards ─────────────────────────────────────────────── -->
+<div class="stat-cards-grid">
+  <!-- Total -->
+  <div class="stat-card">
+    <div class="stat-card-icon" style="background:rgba(99,102,241,0.12); color:#818cf8;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+    </div>
+    <div class="stat-card-label">Total Emails</div>
+    <div class="stat-card-value" id="statTotalEmails">{{ total_emails }}</div>
+    <div class="stat-card-desc">All time processed</div>
+  </div>
+
+  <!-- High Priority -->
+  <div class="stat-card" style="--accent:var(--danger);">
+    <div class="stat-card-icon" style="background:rgba(239,68,68,0.12); color:#fca5a5;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="stat-card-label">High Priority</div>
+    <div class="stat-card-value" id="statHighPrio">{{ high_prio_count }}</div>
+    <div class="stat-card-desc"><span class="badge badge-high">Urgent</span></div>
+  </div>
+
+  <!-- Medium Priority -->
+  <div class="stat-card" style="--accent:var(--info);">
+    <div class="stat-card-icon" style="background:rgba(59,130,246,0.12); color:#93c5fd;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <div class="stat-card-label">Medium Priority</div>
+    <div class="stat-card-value" id="statMedPrio">{{ med_prio_count }}</div>
+    <div class="stat-card-desc"><span class="badge badge-medium">Standard</span></div>
+  </div>
+
+  <!-- Low Priority -->
+  <div class="stat-card" style="--accent:var(--success);">
+    <div class="stat-card-icon" style="background:rgba(16,185,129,0.12); color:#6ee7b7;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    </div>
+    <div class="stat-card-label">Low Priority</div>
+    <div class="stat-card-value" id="statLowPrio">{{ low_prio_count }}</div>
+    <div class="stat-card-desc"><span class="badge badge-low">Routine</span></div>
+  </div>
+
+  <!-- Total Classified -->
+  <div class="stat-card" style="--accent:var(--purple-500);">
+    <div class="stat-card-icon" style="background:rgba(168,85,247,0.12); color:#c084fc;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    </div>
+    <div class="stat-card-label">Total Classified</div>
+    <div class="stat-card-value" id="statTotalClassified">{{ total_classified }}</div>
+    <div class="stat-card-desc">AI + Rule-based</div>
+  </div>
+</div>
+
+<!-- ── Charts ────────────────────────────────────────────────────── -->
+<div id="charts" class="charts-grid">
+  <div class="chart-card">
+    <div class="chart-title">Emails by Category</div>
+    <div class="chart-canvas-wrap">
+      <canvas id="categoryChart"></canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Emails by Priority</div>
+    <div class="chart-canvas-wrap">
+      <canvas id="priorityChart"></canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Emails by Sentiment</div>
+    <div class="chart-canvas-wrap">
+      <canvas id="sentimentChart"></canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Emails by Department</div>
+    <div class="chart-canvas-wrap">
+      <canvas id="departmentChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ── Stats Breakdown ───────────────────────────────────────────── -->
+<div class="stats-breakdown-grid">
+  <!-- Category Stats -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Category Breakdown</h3>
+      <span class="badge badge-subtle">{{ total_emails }} total</span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;flex-direction:column;gap:0.5rem;">
+        {% for cat, count in category_stats.items %}
+        <div class="mini-stat-item">
+          <span class="mini-stat-name">
+            {% if cat == "Technical Support" %}<span class="badge badge-cat-technical" style="margin-right:0.45rem;">TS</span>{% endif %}
+            {% if cat == "Billing" %}<span class="badge badge-cat-billing" style="margin-right:0.45rem;">BL</span>{% endif %}
+            {% if cat == "Complaint" %}<span class="badge badge-cat-complaint" style="margin-right:0.45rem;">CP</span>{% endif %}
+            {% if cat == "Sales" %}<span class="badge badge-cat-sales" style="margin-right:0.45rem;">SL</span>{% endif %}
+            {% if cat == "Account & Access" %}<span class="badge badge-cat-account" style="margin-right:0.45rem;">AA</span>{% endif %}
+            {% if cat == "General Inquiry" %}<span class="badge badge-cat-general" style="margin-right:0.45rem;">GI</span>{% endif %}
+            {{ cat }}
+          </span>
+          <span class="mini-stat-val">{{ count }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Department Stats -->
+  <div class="card">
+    <div class="card-header">
+      <h3>Department Routing</h3>
+      <span class="badge badge-subtle">{{ total_classified }} routed</span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;flex-direction:column;gap:0.5rem;">
+        {% for dept, count in department_stats.items %}
+        <div class="mini-stat-item">
+          <span class="mini-stat-name">{{ dept }}</span>
+          <span class="mini-stat-val">{{ count }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Recent Emails ─────────────────────────────────────────────── -->
+<div class="card" id="recentEmailsSection">
+  <div class="card-header">
+    <h3>Recent Emails</h3>
+    <a href="{% url 'emails:history' %}" class="btn btn-ghost btn-sm" id="viewAllBtn">View All →</a>
+  </div>
+  <div class="card-body-flush">
+    {% if recent_emails %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Sender</th>
+            <th>Subject</th>
+            <th>Category</th>
+            <th>Priority</th>
+            <th>Department</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for email in recent_emails %}
+          <tr id="recentRow{{ email.id }}">
+            <td class="cell-sender">{{ email.sender_email }}</td>
+            <td class="cell-subject">
+              <a href="{% url 'emails:email_detail' email.id %}">{{ email.subject }}</a>
+            </td>
+            <td>
+              {% if email.category == "Technical Support" %}<span class="badge badge-cat-technical">Technical Support</span>
+              {% elif email.category == "Billing" %}<span class="badge badge-cat-billing">Billing</span>
+              {% elif email.category == "Complaint" %}<span class="badge badge-cat-complaint">Complaint</span>
+              {% elif email.category == "Sales" %}<span class="badge badge-cat-sales">Sales</span>
+              {% elif email.category == "Account & Access" %}<span class="badge badge-cat-account">Account &amp; Access</span>
+              {% else %}<span class="badge badge-cat-general">General Inquiry</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if email.priority == "High" %}<span class="badge badge-high">High</span>
+              {% elif email.priority == "Medium" %}<span class="badge badge-medium">Medium</span>
+              {% else %}<span class="badge badge-low">Low</span>
+              {% endif %}
+            </td>
+            <td class="cell-dept">{{ email.department }}</td>
+            <td class="cell-date">{{ email.created_at|date:"M d, Y" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">📭</div>
+      <h4>No emails analyzed yet</h4>
+      <p>Start by submitting an email to the Analyze Email page. Results will appear here automatically.</p>
+      <a href="{% url 'emails:analyze' %}" class="btn btn-primary" id="emptyAnalyzeBtn">Analyze First Email</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  const catData  = {{ category_chart_json|safe }};
+  const prioData = {{ priority_chart_json|safe }};
+  const sentData = {{ sentiment_chart_json|safe }};
+  const deptData = {{ department_chart_json|safe }};
+
+  const gridLine  = 'rgba(28,63,44,0.10)';
+
+  const defaultFont = { family: "'DM Sans', sans-serif", size: 12 };
+
+  Chart.defaults.color = '#65766c';
+  Chart.defaults.font  = defaultFont;
+
+  // Colour palettes
+  const catColors  = ['#267553','#27818a','#c65b49','#537b9f','#c18a39','#756d50'];
+  const prioColors = ['#c65b49','#537b9f','#398663'];
+  const sentColors = ['#398663','#7a8980','#c65b49'];
+  const deptColors = ['#267553','#27818a','#c65b49','#537b9f','#c18a39','#756d50'];
+
+  function buildDoughnut(id, data, colors) {
+    return new Chart(document.getElementById(id), {
+      type: 'doughnut',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          data: data.data,
+          backgroundColor: colors.map(c => c + 'dd'),
+          borderColor: colors,
+          borderWidth: 2,
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 14,
+              boxWidth: 12,
+              boxHeight: 12,
+              font: { size: 11 }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  function buildBar(id, data, colors) {
+    return new Chart(document.getElementById(id), {
+      type: 'bar',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label: 'Emails',
+          data: data.data,
+          backgroundColor: colors.map(c => c + 'aa'),
+          borderColor: colors,
+          borderWidth: 1.5,
+          borderRadius: 6
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            ticks: { stepSize: 1, font: { size: 11 } },
+            grid: { color: gridLine }
+          },
+          y: {
+            ticks: { font: { size: 11 } },
+            grid: { color: gridLine }
+          }
+        },
+        plugins: {
+          legend: { display: false }
+        }
+      }
+    });
+  }
+
+  buildDoughnut('categoryChart',  catData,  catColors);
+  buildDoughnut('priorityChart',  prioData, prioColors);
+  buildDoughnut('sentimentChart', sentData, sentColors);
+  buildBar('departmentChart',     deptData, deptColors);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}AI Email Classification and Routing System{% endblock %}
+{% block breadcrumb %}Home{% endblock %}
+
+{% block content %}
+<div class="page-heading-row">
+  <div class="page-heading mb-0">
+    <h1>AI Email Classification<br>and Routing System</h1>
+    <p>Intelligent email triage, classification, and automated departmental routing for CRT projects.</p>
+  </div>
+  <a href="{% url 'emails:analyze' %}" class="btn btn-primary" id="homeAnalyzeBtn">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Analyze Email Now
+  </a>
+</div>
+
+<!-- Quick stats -->
+<div class="stat-cards-grid mb-4">
+  <div class="stat-card">
+    <div class="stat-card-label">Total Emails Processed</div>
+    <div class="stat-card-value">{{ total_emails }}</div>
+    <div class="stat-card-desc">All time in database</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card-label">Quick Action</div>
+    <div style="margin-top:0.5rem;display:flex;flex-direction:column;gap:0.5rem;">
+      <a href="{% url 'emails:dashboard' %}" class="btn btn-secondary btn-sm" id="homeGoDashBtn">→ Dashboard</a>
+      <a href="{% url 'emails:history' %}" class="btn btn-ghost btn-sm" id="homeGoHistoryBtn">→ Email History</a>
+    </div>
+  </div>
+</div>
+
+<!-- Category Showcase -->
+<div class="card mb-3">
+  <div class="card-header"><h3>Supported Email Categories</h3></div>
+  <div class="card-body">
+    <div style="display:flex;flex-wrap:wrap;gap:0.6rem;">
+      <span class="badge badge-cat-technical" style="font-size:0.82rem;padding:0.4rem 0.9rem;">🔧 Technical Support</span>
+      <span class="badge badge-cat-billing"   style="font-size:0.82rem;padding:0.4rem 0.9rem;">💳 Billing</span>
+      <span class="badge badge-cat-complaint" style="font-size:0.82rem;padding:0.4rem 0.9rem;">⚠ Complaint</span>
+      <span class="badge badge-cat-sales"     style="font-size:0.82rem;padding:0.4rem 0.9rem;">💼 Sales</span>
+      <span class="badge badge-cat-account"   style="font-size:0.82rem;padding:0.4rem 0.9rem;">🔑 Account &amp; Access</span>
+      <span class="badge badge-cat-general"   style="font-size:0.82rem;padding:0.4rem 0.9rem;">💬 General Inquiry</span>
+    </div>
+  </div>
+</div>
+
+<!-- Recent -->
+{% if recent_emails %}
+<div class="card" id="homeRecentCard">
+  <div class="card-header">
+    <h3>Recent Emails</h3>
+    <a href="{% url 'emails:history' %}" class="btn btn-ghost btn-sm" id="homeViewAllBtn">View All →</a>
+  </div>
+  <div class="card-body-flush">
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr><th>Sender</th><th>Subject</th><th>Category</th><th>Priority</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+          {% for email in recent_emails %}
+          <tr>
+            <td class="cell-sender">{{ email.sender_email }}</td>
+            <td class="cell-subject"><a href="{% url 'emails:email_detail' email.id %}">{{ email.subject }}</a></td>
+            <td>
+              {% if email.category == "Technical Support" %}<span class="badge badge-cat-technical">Technical Support</span>
+              {% elif email.category == "Billing" %}<span class="badge badge-cat-billing">Billing</span>
+              {% elif email.category == "Complaint" %}<span class="badge badge-cat-complaint">Complaint</span>
+              {% elif email.category == "Sales" %}<span class="badge badge-cat-sales">Sales</span>
+              {% elif email.category == "Account & Access" %}<span class="badge badge-cat-account">Account &amp; Access</span>
+              {% else %}<span class="badge badge-cat-general">General Inquiry</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if email.priority == "High" %}<span class="badge badge-high">High</span>
+              {% elif email.priority == "Medium" %}<span class="badge badge-medium">Medium</span>
+              {% else %}<span class="badge badge-low">Low</span>
+              {% endif %}
+            </td>
+            <td class="cell-date">{{ email.created_at|date:"M d, Y" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Email #{{ email.id }}: {{ email.subject }} — AI Email Classification{% endblock %}
+{% block breadcrumb %}Email Detail{% endblock %}
+
+{% block content %}
+<!-- Back nav -->
+<a href="{% url 'emails:history' %}" class="back-link" id="backToHistoryLink">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  Back to History
+</a>
+
+<div class="page-heading-row">
+  <div class="page-heading mb-0">
+    <h1>Email Detail <span class="text-muted" style="font-weight:500;">#{{ email.id }}</span></h1>
+    <p>Full classification record and AI routing decision.</p>
+  </div>
+  <!-- Priority badge in heading area -->
+  <div class="flex-row">
+    {% if email.priority == "High" %}<span class="badge badge-high" style="font-size:0.82rem;padding:0.35rem 1rem;">🔴 High Priority</span>
+    {% elif email.priority == "Medium" %}<span class="badge badge-medium" style="font-size:0.82rem;padding:0.35rem 1rem;">🔵 Medium Priority</span>
+    {% else %}<span class="badge badge-low" style="font-size:0.82rem;padding:0.35rem 1rem;">🟢 Low Priority</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="detail-grid">
+
+  <!-- ── Left Column: Email Content ─────────────────────────────── -->
+  <div class="detail-column">
+
+    <!-- Email Header -->
+    <div class="card" id="emailHeaderCard">
+      <div class="card-header">
+        <h3>Email Information</h3>
+        {% if email.engine and "Rule" in email.engine %}
+          <span class="badge badge-fallback">⚙ {{ email.engine }}</span>
+        {% elif email.engine and "Gemini" in email.engine %}
+          <span class="badge badge-gemini">✦ Google Gemini</span>
+        {% else %}
+          <span class="badge badge-ai">✦ {{ email.engine }}</span>
+        {% endif %}
+      </div>
+      <div class="card-body">
+        <div class="email-meta-header">
+          <div class="email-meta-row">
+            <span class="email-meta-key">From</span>
+            <span class="email-meta-val text-mono">{{ email.sender_email }}</span>
+          </div>
+          <div class="email-meta-row">
+            <span class="email-meta-key">Subject</span>
+            <span class="email-meta-val fw-700">{{ email.subject }}</span>
+          </div>
+          <div class="email-meta-row">
+            <span class="email-meta-key">Date</span>
+            <span class="email-meta-val text-muted text-mono text-sm">{{ email.created_at|date:"F j, Y · g:i A" }}</span>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="form-label mb-1" style="margin-top:0.5rem;">Email Body</div>
+        <div class="email-body-viewer" id="emailBodyContent">{{ email.body }}</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Right Column: Classification ────────────────────────────── -->
+  <div class="detail-column">
+
+    <!-- Classification Card -->
+    <div class="card" id="classificationCard">
+      <div class="card-header">
+        <h3>Classification</h3>
+      </div>
+      <div class="card-body">
+
+        <div class="result-row">
+          <span class="result-label">AI Engine</span>
+          {% if email.engine and "Rule" in email.engine %}
+            <span class="badge badge-fallback">Rule-Based Fallback</span>
+          {% elif email.engine and "Gemini" in email.engine %}
+            <span class="badge badge-gemini">Google Gemini</span>
+          {% else %}
+            <span class="badge badge-ai">{{ email.engine }}</span>
+          {% endif %}
+        </div>
+
+        <!-- Category -->
+        <div class="result-row">
+          <span class="result-label">Category</span>
+          <span class="result-value" style="margin-top:0.3rem;">
+            {% if email.category == "Technical Support" %}<span class="badge badge-cat-technical" style="font-size:0.82rem;padding:0.4rem 0.9rem;">🔧 Technical Support</span>
+            {% elif email.category == "Billing" %}<span class="badge badge-cat-billing" style="font-size:0.82rem;padding:0.4rem 0.9rem;">💳 Billing</span>
+            {% elif email.category == "Complaint" %}<span class="badge badge-cat-complaint" style="font-size:0.82rem;padding:0.4rem 0.9rem;">⚠ Complaint</span>
+            {% elif email.category == "Sales" %}<span class="badge badge-cat-sales" style="font-size:0.82rem;padding:0.4rem 0.9rem;">💼 Sales</span>
+            {% elif email.category == "Account & Access" %}<span class="badge badge-cat-account" style="font-size:0.82rem;padding:0.4rem 0.9rem;">🔑 Account &amp; Access</span>
+            {% else %}<span class="badge badge-cat-general" style="font-size:0.82rem;padding:0.4rem 0.9rem;">💬 General Inquiry</span>
+            {% endif %}
+          </span>
+        </div>
+
+        <!-- Priority -->
+        <div class="result-row">
+          <span class="result-label">Priority</span>
+          <span style="display:block;margin-top:0.3rem;">
+            {% if email.priority == "High" %}<span class="badge badge-high">🔴 High</span>
+            {% elif email.priority == "Medium" %}<span class="badge badge-medium">🔵 Medium</span>
+            {% else %}<span class="badge badge-low">🟢 Low</span>
+            {% endif %}
+          </span>
+        </div>
+
+        <!-- Sentiment -->
+        <div class="result-row">
+          <span class="result-label">Sentiment</span>
+          <span style="display:block;margin-top:0.3rem;">
+            {% if email.sentiment == "Positive" %}<span class="badge badge-positive">😊 Positive</span>
+            {% elif email.sentiment == "Negative" %}<span class="badge badge-negative">😠 Negative</span>
+            {% else %}<span class="badge badge-neutral">😐 Neutral</span>
+            {% endif %}
+          </span>
+        </div>
+
+        <!-- Confidence -->
+        <div class="result-row">
+          <span class="result-label">Confidence</span>
+          <div class="conf-bar-track" style="margin-top:0.4rem;">
+            <div class="conf-bar-fill" style="width:{{ email.confidence }}%;"></div>
+          </div>
+          <span class="conf-percentage">{{ email.confidence }}%</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Routing Card -->
+    <div class="card" id="routingCard">
+      <div class="card-header">
+        <h3>Routing Decision</h3>
+      </div>
+      <div class="card-body">
+        <div class="result-label mb-1">Assigned Department</div>
+        <div class="dept-box mb-2" style="width:100%;justify-content:center;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          {{ email.department }}
+        </div>
+
+        <div class="result-label mb-1">AI Reason / Explanation</div>
+        <div class="reason-box">{{ email.reason }}</div>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="flex-between" id="detailActionsRow">
+      <a href="{% url 'emails:analyze' %}" class="btn btn-primary btn-sm" id="analyzeAnotherBtn">+ Analyze Another</a>
+      <a href="{% url 'emails:history' %}" class="btn btn-secondary btn-sm" id="backHistoryBtn">← All Emails</a>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+

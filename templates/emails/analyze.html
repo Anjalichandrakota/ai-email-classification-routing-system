@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Analyze Email — AI Email Classification and Routing System{% endblock %}
+{% block breadcrumb %}Analyze Email{% endblock %}
+
+{% block content %}
+<div class="page-heading">
+  <h1>Analyze Email</h1>
+  <p>Paste an email below. Our AI engine will classify it, determine priority, and route it to the correct department.</p>
+</div>
+
+<!-- API Key Notice -->
+{% if not has_api_key %}
+<div class="flash-msg flash-info mb-2" id="apiKeyNotice" style="max-width:100%;">
+  <span class="flash-icon">ℹ</span>
+  <span class="flash-text"><strong>Rule-based mode active.</strong> No AI provider is configured, so emails will use the rule-based fallback.</span>
+  <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+</div>
+{% endif %}
+
+<div class="analyze-grid">
+
+  <!-- ── Input Form ─────────────────────────────────────────────── -->
+  <div class="card" id="emailFormCard">
+    <div class="card-header">
+      <h2>Email Details</h2>
+      <button type="button" class="btn btn-ghost btn-sm" id="loadSampleBtn">Load Sample</button>
+    </div>
+    <div class="card-body">
+      <form method="post" id="analyzeForm">
+        {% csrf_token %}
+
+        <div class="form-group">
+          <label class="form-label" for="id_sender_email">Sender Email <span class="req">*</span></label>
+          <input
+            type="email"
+            class="form-control"
+            id="id_sender_email"
+            name="sender_email"
+            value="{{ form_data.sender_email }}"
+            placeholder="e.g. customer@example.com"
+            autocomplete="email"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="id_subject">Subject <span class="req">*</span></label>
+          <input
+            type="text"
+            class="form-control"
+            id="id_subject"
+            name="subject"
+            value="{{ form_data.subject }}"
+            placeholder="e.g. My account login is not working"
+            required
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="id_body">Email Body <span class="req">*</span></label>
+          <textarea
+            class="form-control"
+            id="id_body"
+            name="body"
+            rows="10"
+            placeholder="Paste the full email content here…"
+            required
+          >{{ form_data.body }}</textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="analyzeBtnSubmit" style="width:100%;justify-content:center;padding-top:0.75rem;padding-bottom:0.75rem;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Analyze Email
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Result Panel ───────────────────────────────────────────── -->
+  <div class="card" id="resultCard">
+    {% if result %}
+    <!-- Result Header -->
+    <div class="card-header">
+      <h2>Classification Result</h2>
+      <div class="flex-row">
+        {% if result.engine and "Rule" in result.engine %}
+          <span class="badge badge-fallback">⚙ {{ result.engine }}</span>
+        {% elif result.engine and "Gemini" in result.engine %}
+          <span class="badge badge-gemini">✦ Google Gemini</span>
+        {% else %}
+          <span class="badge badge-ai">✦ {{ result.engine }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card-body">
+
+      <div class="result-row">
+        <span class="result-label">AI Engine</span>
+        {% if result.engine and "Rule" in result.engine %}
+          <span class="badge badge-fallback">Rule-Based Fallback</span>
+        {% elif result.engine and "Gemini" in result.engine %}
+          <span class="badge badge-gemini">Google Gemini</span>
+        {% else %}
+          <span class="badge badge-ai">{{ result.engine }}</span>
+        {% endif %}
+      </div>
+
+      <!-- Category -->
+      <div class="result-row">
+        <span class="result-label">Category</span>
+        <span class="result-value-lg">
+          {% if result.category == "Technical Support" %}<span class="badge badge-cat-technical" style="font-size:0.85rem;padding:0.35rem 0.85rem;">🔧 Technical Support</span>
+          {% elif result.category == "Billing" %}<span class="badge badge-cat-billing" style="font-size:0.85rem;padding:0.35rem 0.85rem;">💳 Billing</span>
+          {% elif result.category == "Complaint" %}<span class="badge badge-cat-complaint" style="font-size:0.85rem;padding:0.35rem 0.85rem;">⚠ Complaint</span>
+          {% elif result.category == "Sales" %}<span class="badge badge-cat-sales" style="font-size:0.85rem;padding:0.35rem 0.85rem;">💼 Sales</span>
+          {% elif result.category == "Account & Access" %}<span class="badge badge-cat-account" style="font-size:0.85rem;padding:0.35rem 0.85rem;">🔑 Account &amp; Access</span>
+          {% else %}<span class="badge badge-cat-general" style="font-size:0.85rem;padding:0.35rem 0.85rem;">💬 General Inquiry</span>
+          {% endif %}
+        </span>
+      </div>
+
+      <!-- Priority + Sentiment (2-column) -->
+      <div class="result-row result-grid-2">
+        <div>
+          <span class="result-label">Priority</span>
+          <span class="result-value" style="display:block;margin-top:0.3rem;">
+            {% if result.priority == "High" %}<span class="badge badge-high" style="font-size:0.8rem;">🔴 High</span>
+            {% elif result.priority == "Medium" %}<span class="badge badge-medium" style="font-size:0.8rem;">🔵 Medium</span>
+            {% else %}<span class="badge badge-low" style="font-size:0.8rem;">🟢 Low</span>
+            {% endif %}
+          </span>
+        </div>
+        <div>
+          <span class="result-label">Sentiment</span>
+          <span class="result-value" style="display:block;margin-top:0.3rem;">
+            {% if result.sentiment == "Positive" %}<span class="badge badge-positive" style="font-size:0.8rem;">😊 Positive</span>
+            {% elif result.sentiment == "Negative" %}<span class="badge badge-negative" style="font-size:0.8rem;">😠 Negative</span>
+            {% else %}<span class="badge badge-neutral" style="font-size:0.8rem;">😐 Neutral</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+
+      <!-- Confidence -->
+      <div class="result-row">
+        <span class="result-label">Confidence</span>
+        <div class="conf-bar-track">
+          <div class="conf-bar-fill" id="confBarFill" style="width:{{ result.confidence }}%;"></div>
+        </div>
+        <span class="conf-percentage">{{ result.confidence }}%</span>
+      </div>
+
+      <!-- Department -->
+      <div class="result-row">
+        <span class="result-label">Assigned Department</span>
+        <span class="dept-box">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          {{ result.department }}
+        </span>
+      </div>
+
+      <!-- Reason -->
+      <div class="result-row">
+        <span class="result-label">AI Reason</span>
+        <div class="reason-box">{{ result.reason }}</div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex-between mt-2">
+        <a href="{% url 'emails:email_detail' result.id %}" class="btn btn-secondary btn-sm" id="viewDetailBtn">View Full Detail →</a>
+        <a href="{% url 'emails:history' %}" class="btn btn-ghost btn-sm" id="viewHistoryBtn">Email History</a>
+      </div>
+
+    </div>
+
+    {% else %}
+    <!-- Awaiting -->
+    <div class="card-header">
+      <h2>Analysis Result</h2>
+    </div>
+    <div class="awaiting-card" id="awaitingPanel">
+      <div class="awaiting-icon">🔍</div>
+      <div class="awaiting-title">Ready to Analyze</div>
+      <div class="awaiting-sub">Fill in the email details on the left and click "Analyze Email" to get an instant AI-powered classification.</div>
+      <div class="cat-pills" id="catPillsDemo">
+        <span class="badge badge-cat-technical">🔧 Technical Support</span>
+        <span class="badge badge-cat-billing">💳 Billing</span>
+        <span class="badge badge-cat-complaint">⚠ Complaint</span>
+        <span class="badge badge-cat-sales">💼 Sales</span>
+        <span class="badge badge-cat-account">🔑 Account &amp; Access</span>
+        <span class="badge badge-cat-general">💬 General Inquiry</span>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Email History — AI Email Classification and Routing System{% endblock %}
+{% block breadcrumb %}Email History{% endblock %}
+
+{% block content %}
+<div class="page-heading-row">
+  <div class="page-heading mb-0">
+    <h1>Email History</h1>
+    <p>
+      Showing <strong>{{ filtered_count }}</strong>
+      {% if filtered_count != total_count %}(filtered from {{ total_count }} total){% endif %}
+      classified email{% if filtered_count != 1 %}s{% endif %}.
+    </p>
+  </div>
+  <a href="{% url 'emails:analyze' %}" class="btn btn-primary" id="historyAnalyzeBtn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Analyze New
+  </a>
+</div>
+
+<!-- ── Filter Bar ─────────────────────────────────────────────────── -->
+<div class="card mb-2" id="filterCard">
+  <div class="card-body" style="padding:1rem 1.35rem;">
+    <form method="get" id="filterForm">
+      <div class="filter-bar">
+        <!-- Search -->
+        <div class="filter-field filter-search">
+          <label class="filter-label" for="searchInput">Search</label>
+          <div style="position:relative;">
+            <svg style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);opacity:0.45;pointer-events:none;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input
+              type="text"
+              name="search"
+              id="searchInput"
+              class="form-control"
+              placeholder="Sender or subject…"
+              value="{{ filters.search }}"
+              style="padding-left:2rem;"
+            >
+          </div>
+        </div>
+
+        <!-- Category -->
+        <div class="filter-field">
+          <label class="filter-label" for="categoryFilter">Category</label>
+          <select name="category" id="categoryFilter" class="form-control auto-submit-select" style="min-width:160px;">
+            <option value="">All Categories</option>
+            {% for cat in categories %}
+            <option value="{{ cat }}" {% if filters.category == cat %}selected{% endif %}>{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Priority -->
+        <div class="filter-field">
+          <label class="filter-label" for="priorityFilter">Priority</label>
+          <select name="priority" id="priorityFilter" class="form-control auto-submit-select" style="min-width:130px;">
+            <option value="">All Priorities</option>
+            {% for p in priorities %}
+            <option value="{{ p }}" {% if filters.priority == p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Sentiment -->
+        <div class="filter-field">
+          <label class="filter-label" for="sentimentFilter">Sentiment</label>
+          <select name="sentiment" id="sentimentFilter" class="form-control auto-submit-select" style="min-width:140px;">
+            <option value="">All Sentiments</option>
+            {% for s in sentiments %}
+            <option value="{{ s }}" {% if filters.sentiment == s %}selected{% endif %}>{{ s }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Department -->
+        <div class="filter-field">
+          <label class="filter-label" for="deptFilter">Department</label>
+          <select name="department" id="deptFilter" class="form-control auto-submit-select" style="min-width:185px;">
+            <option value="">All Departments</option>
+            {% for d in departments %}
+            <option value="{{ d }}" {% if filters.department == d %}selected{% endif %}>{{ d }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Buttons -->
+        <div class="filter-field" style="justify-content:flex-end;">
+          <label class="filter-label" style="opacity:0;">&nbsp;</label>
+          <div class="flex-row">
+            <button type="submit" class="btn btn-primary btn-sm" id="filterSearchBtn">Search</button>
+            {% if filters.search or filters.category or filters.priority or filters.sentiment or filters.department %}
+            <a href="{% url 'emails:history' %}" class="btn btn-ghost btn-sm" id="clearFiltersBtn">Clear</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ── Table ──────────────────────────────────────────────────────── -->
+<div class="card" id="historyTableCard">
+  <div class="card-body-flush">
+    {% if emails %}
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Sender</th>
+            <th>Subject</th>
+            <th>Category</th>
+            <th>Priority</th>
+            <th>Sentiment</th>
+            <th>Department</th>
+            <th>Confidence</th>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for email in emails %}
+          <tr id="historyRow{{ email.id }}">
+            <td class="text-muted text-mono text-xs">#{{ email.id }}</td>
+            <td class="cell-sender">{{ email.sender_email }}</td>
+            <td class="cell-subject">
+              <a href="{% url 'emails:email_detail' email.id %}">{{ email.subject }}</a>
+            </td>
+            <td>
+              {% if email.category == "Technical Support" %}<span class="badge badge-cat-technical">Technical Support</span>
+              {% elif email.category == "Billing" %}<span class="badge badge-cat-billing">Billing</span>
+              {% elif email.category == "Complaint" %}<span class="badge badge-cat-complaint">Complaint</span>
+              {% elif email.category == "Sales" %}<span class="badge badge-cat-sales">Sales</span>
+              {% elif email.category == "Account & Access" %}<span class="badge badge-cat-account">Account &amp; Access</span>
+              {% else %}<span class="badge badge-cat-general">General Inquiry</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if email.priority == "High" %}<span class="badge badge-high">🔴 High</span>
+              {% elif email.priority == "Medium" %}<span class="badge badge-medium">🔵 Medium</span>
+              {% else %}<span class="badge badge-low">🟢 Low</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if email.sentiment == "Positive" %}<span class="badge badge-positive">Positive</span>
+              {% elif email.sentiment == "Negative" %}<span class="badge badge-negative">Negative</span>
+              {% else %}<span class="badge badge-neutral">Neutral</span>
+              {% endif %}
+            </td>
+            <td class="cell-dept">{{ email.department }}</td>
+            <td class="cell-confidence">
+              {% if email.confidence >= 80 %}<span style="color:#34d399;">{% elif email.confidence >= 60 %}<span style="color:#93c5fd;">{% else %}<span style="color:#fde68a;">{% endif %}
+              {{ email.confidence }}%</span>
+            </td>
+            <td class="cell-date">{{ email.created_at|date:"M d, Y" }}</td>
+            <td>
+              <a href="{% url 'emails:email_detail' email.id %}" class="btn btn-ghost btn-xs" id="detailBtn{{ email.id }}">Details</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty-state" id="historyEmptyState">
+      <div class="empty-state-icon">🔎</div>
+      {% if filters.search or filters.category or filters.priority or filters.sentiment or filters.department %}
+        <h4>No matching emails</h4>
+        <p>No emails match your current filters. Try adjusting or clearing the filters.</p>
+        <a href="{% url 'emails:history' %}" class="btn btn-secondary" id="clearFiltersEmptyBtn">Clear Filters</a>
+      {% else %}
+        <h4>No emails in history</h4>
+        <p>No emails have been analyzed yet. Submit one on the Analyze Email page.</p>
+        <a href="{% url 'emails:analyze' %}" class="btn btn-primary" id="emptyHistoryAnalyzeBtn">Analyze First Email</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
