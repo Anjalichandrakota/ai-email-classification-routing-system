@@ -1,0 +1,56 @@
+[
+    {
+        "sender": "user1@example.com",
+        "subject": "Unable to login to my account",
+        "body": "I have forgotten my password and cannot access my account.",
+        "expected_category": "Account & Access",
+        "expected_priority": "High",
+        "expected_sentiment": "Negative",
+        "expected_department": "Account Support Team"
+    },
+    {
+        "sender": "user2@example.com",
+        "subject": "Payment issue",
+        "body": "I was charged twice for the same order.",
+        "expected_category": "Billing",
+        "expected_priority": "High",
+        "expected_sentiment": "Negative",
+        "expected_department": "Finance/Billing Team"
+    },
+    {
+        "sender": "user3@example.com",
+        "subject": "Application error",
+        "body": "The application crashes whenever I try to upload a file.",
+        "expected_category": "Technical Support",
+        "expected_priority": "High",
+        "expected_sentiment": "Negative",
+        "expected_department": "Technical Support Team"
+    },
+    {
+        "sender": "user4@example.com",
+        "subject": "Interested in your product",
+        "body": "Please send me information about your latest product and pricing.",
+        "expected_category": "Sales",
+        "expected_priority": "Medium",
+        "expected_sentiment": "Positive",
+        "expected_department": "Sales Team"
+    },
+    {
+        "sender": "user5@example.com",
+        "subject": "Poor service experience",
+        "body": "I am unhappy with the service I received and would like this issue resolved.",
+        "expected_category": "Complaint",
+        "expected_priority": "High",
+        "expected_sentiment": "Negative",
+        "expected_department": "Customer Relations Team"
+    },
+    {
+        "sender": "user6@example.com",
+        "subject": "General information",
+        "body": "Could you please provide more information about your services?",
+        "expected_category": "General Inquiry",
+        "expected_priority": "Low",
+        "expected_sentiment": "Neutral",
+        "expected_department": "General Support Team"
+    }
+]
