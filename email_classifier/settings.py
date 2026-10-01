@@ -18,25 +18,48 @@ from django.core.exceptions import ImproperlyConfigured
 
 from email_classifier.environment import load_local_environment
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from local .env when available.
 load_local_environment()
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+# ============================================================
+# SECURITY / DEPLOYMENT SETTINGS
+# ============================================================
 
-# Local development defaults are intentionally safe for localhost only.
-DEBUG = os.environ.get('DJANGO_DEBUG', 'true').strip().lower() in {'true', '1', 'yes', 'on'}
+# DEBUG is enabled only when explicitly requested.
+# For deployment, set DJANGO_DEBUG=false.
+DEBUG = os.environ.get(
+    'DJANGO_DEBUG',
+    'false'
+).strip().lower() in {'true', '1', 'yes', 'on'}
+
+
+# SECRET_KEY must come from an environment variable in production.
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+
 if SECRET_KEY == 'replace_with_a_random_secret':
     SECRET_KEY = None
+
 if not SECRET_KEY:
     if not DEBUG:
-        raise ImproperlyConfigured('DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is disabled.')
+        raise ImproperlyConfigured(
+            'DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is disabled.'
+        )
+
+    # Local development fallback only.
     SECRET_KEY = secrets.token_urlsafe(50)
 
+
+# ============================================================
+# ALLOWED HOSTS
+# ============================================================
+
 configured_hosts = os.environ.get('DJANGO_ALLOWED_HOSTS', '')
+
 ALLOWED_HOSTS = (
     [host.strip() for host in configured_hosts.split(',') if host.strip()]
     if configured_hosts.strip()
@@ -44,7 +67,25 @@ ALLOWED_HOSTS = (
 )
 
 
-# Application definition
+# ============================================================
+# CSRF TRUSTED ORIGINS
+# ============================================================
+
+configured_csrf_origins = os.environ.get(
+    'DJANGO_CSRF_TRUSTED_ORIGINS',
+    ''
+)
+
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in configured_csrf_origins.split(',')
+    if origin.strip()
+]
+
+
+# ============================================================
+# APPLICATION DEFINITION
+# ============================================================
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -56,6 +97,7 @@ INSTALLED_APPS = [
     'emails',
 ]
 
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -66,7 +108,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+
 ROOT_URLCONF = 'email_classifier.urls'
+
 
 TEMPLATES = [
     {
@@ -83,11 +127,13 @@ TEMPLATES = [
     },
 ]
 
+
 WSGI_APPLICATION = 'email_classifier.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/6.1/ref/settings/#databases
+# ============================================================
+# DATABASE
+# ============================================================
 
 DATABASES = {
     'default': {
@@ -97,27 +143,41 @@ DATABASES = {
 }
 
 
-# Password validation
-# https://docs.djangoproject.com/en/6.1/ref/settings/#auth-password-validators
+# ============================================================
+# PASSWORD VALIDATION
+# ============================================================
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.'
+            'UserAttributeSimilarityValidator'
+        ),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.'
+            'MinimumLengthValidator'
+        ),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.'
+            'CommonPasswordValidator'
+        ),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': (
+            'django.contrib.auth.password_validation.'
+            'NumericPasswordValidator'
+        ),
     },
 ]
 
 
-# Internationalization
-# https://docs.djangoproject.com/en/6.1/topics/i18n/
+# ============================================================
+# INTERNATIONALIZATION
+# ============================================================
 
 LANGUAGE_CODE = 'en-us'
 
@@ -128,36 +188,91 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.1/howto/static-files/
+# ============================================================
+# STATIC FILES
+# ============================================================
 
 STATIC_URL = 'static/'
+
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
+# Directory used by collectstatic during deployment.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Email
-# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+
+# ============================================================
+# PRODUCTION SECURITY
+# ============================================================
+
+# These are enabled only when DEBUG is disabled.
+# This prevents local development from being affected.
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+
+    SESSION_COOKIE_SECURE = True
+
+    CSRF_COOKIE_SECURE = True
+
+    SECURE_HSTS_SECONDS = 31536000
+
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
+    SECURE_HSTS_PRELOAD = True
+
+
+# ============================================================
+# EMAIL
+# ============================================================
+
+# Production-ready SMTP configuration.
+# Email credentials must be supplied through environment variables.
+#
+# Example environment variables:
+#
+# EMAIL_HOST=smtp.gmail.com
+# EMAIL_PORT=587
+# EMAIL_HOST_USER=your_email@gmail.com
+# EMAIL_HOST_PASSWORD=your_app_password
+# EMAIL_USE_TLS=true
 
 MAILERS = {
     'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+        'HOST': os.environ.get('EMAIL_HOST', ''),
+        'PORT': int(os.environ.get('EMAIL_PORT', '587')),
+        'USERNAME': os.environ.get('EMAIL_HOST_USER', ''),
+        'PASSWORD': os.environ.get('EMAIL_HOST_PASSWORD', ''),
+        'USE_TLS': os.environ.get(
+            'EMAIL_USE_TLS',
+            'true'
+        ).strip().lower() in {'true', '1', 'yes', 'on'},
     },
 }
 
-# Emit only the service's explicitly sanitized diagnostics in the Django
-# terminal. The formatter includes message text only; API keys and headers are
-# never part of these records.
+
+# ============================================================
+# LOGGING
+# ============================================================
+
+# Emit only the service's explicitly sanitized diagnostics
+# in the Django terminal.
+#
+# API keys and headers are never included in these records.
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+
     'formatters': {
         'provider_diagnostics': {
             'format': '{message}',
             'style': '{',
         },
     },
+
     'handlers': {
         'provider_console': {
             'class': 'logging.StreamHandler',
@@ -165,12 +280,14 @@ LOGGING = {
             'formatter': 'provider_diagnostics',
         },
     },
+
     'loggers': {
         'emails.views': {
             'handlers': ['provider_console'],
             'level': 'INFO',
             'propagate': False,
         },
+
         'emails.ai_service': {
             'handlers': ['provider_console'],
             'level': 'INFO',
