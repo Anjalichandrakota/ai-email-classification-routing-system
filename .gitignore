@@ -2,3 +2,7 @@
 .env.*
 !.env.example
 db.sqlite3
+__pycache__/
+*.pyc
+venv/
+.venv/
